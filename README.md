@@ -1,10 +1,10 @@
 Implementation Order
 
-/api/name - Student name
+/api/name - Student name - Done
 
-/api/info – Student profile
+/api/info – Student profile - Done
 
-/api/classes – List of classes
+/api/classes – List of classes - Done
 
 /api/averages – Class averages
 

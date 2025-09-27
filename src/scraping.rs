@@ -239,7 +239,7 @@ pub fn extract_assignments(html: &str, short: bool) -> HashMap<String, Vec<Vec<S
 
                         if row_data.is_empty() { continue; }
 
-                        if let Some(first) = row_data.get(0) {
+                        if let Some(first) = row_data.first() {
                             if ["Major", "Minor", "Other", "Total"].contains(&first.as_str()) {
                                 continue;
                             }
@@ -310,3 +310,68 @@ pub fn extract_gradebook(html: &str, short: bool) -> Map<String, Value> {
     
     combined
 }
+
+pub fn extract_report_cards(html: &str) -> Vec<Vec<String>> {
+    use scraper::{Html, Selector};
+
+    let document = Html::parse_document(html);
+    let td_selector = Selector::parse("td").unwrap();
+
+    let mut all_cells: Vec<String> = Vec::new();
+
+    for (i, td) in document.select(&td_selector).enumerate() {
+        if i >= 32 { 
+            let text = td.text().collect::<Vec<_>>().join(" ").trim().to_string();
+            all_cells.push(text);
+        }
+    }
+
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    let mut current_row: Vec<String> = Vec::new();
+
+    for cell in all_cells {
+        current_row.push(cell);
+        if current_row.len() == 32 {
+            rows.push(current_row);
+            current_row = Vec::new();
+        }
+    }
+
+    for row in &mut rows {
+        if row.len() >= 32 {
+            row.drain(23..32);
+        }
+
+        if row.len() >= 7 {
+            row.drain(5..7);
+        }
+    }
+
+    rows
+}
+
+pub fn extract_progress(html: &str) -> Vec<Vec<String>> {
+    let document = Html::parse_document(html);
+    let row_selector = Selector::parse("tr").unwrap();
+    let cell_selector = Selector::parse("td").unwrap();
+
+    let mut data: Vec<Vec<String>> = Vec::new();
+
+    for (i, row) in document.select(&row_selector).enumerate() {
+        let row_data: Vec<String> = row
+            .select(&cell_selector)
+            .map(|cell| cell.text().collect::<Vec<_>>().join(" ").trim().to_string())
+            .collect();
+
+        if row_data.is_empty() {
+            continue;
+        }
+
+        if i != 0 {
+            data.push(row_data);
+        }
+    }
+
+    data 
+}
+

@@ -12,9 +12,9 @@ Implementation Order
 
 /api/gradebook - Assignments + grades + weightings - Done 
 
-/api/reportcard - Report card tables
+/api/reportcard - Report card tables - Done
 
-/api/ipr - Interim progress report
+/api/ipr - Interim progress report - Done
 
 /api/transcript - Full transcript with GPA and semesters
 

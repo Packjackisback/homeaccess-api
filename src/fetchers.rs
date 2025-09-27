@@ -153,3 +153,37 @@ pub async fn fetch_name_page(client: &Client, base_url: &str) -> Result<String, 
 
     Ok(body)
 }
+
+pub async fn fetch_report_page(client: &reqwest::Client, base_url: &str) -> Result<String, String> {
+    let url = format!("{}/HomeAccess/Content/Student/ReportCards.aspx", base_url);
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|_| "Failed to fetch report page".to_string())?;
+
+    let body = response
+        .text()
+        .await
+        .map_err(|_| "Failed to read report page body".to_string())?;
+
+    Ok(body)
+}
+
+pub async fn fetch_progress_page(client: &Client, base_url: &str) -> Result<String, String> {
+    let url = format!("{}/HomeAccess/Content/Student/InterimProgress.aspx", base_url);
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|_| "Failed to fetch progress page".to_string())?;
+
+    let body = response
+        .text()
+        .await
+        .map_err(|_| "Failed to read progress page body".to_string())?;
+
+    Ok(body)
+}

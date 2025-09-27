@@ -7,7 +7,7 @@ use axum::{
 use serde_json::json;
 use serde::Deserialize;
 use crate::auth::login_handler;
-use crate::scraping::{extract_name, extract_info, extract_classes, extract_averages};
+use crate::scraping::{extract_name, extract_info, extract_classes, extract_averages, extract_assignments};
 use crate::fetchers::{fetch_info_page, fetch_assignments_page, fetch_name_page, fetch_assignments_page_for_six_weeks};
 
 #[derive(Deserialize)]
@@ -141,3 +141,51 @@ pub async fn get_averages(Query(params): Query<LoginParams>) -> impl IntoRespons
     (StatusCode::OK, Json(json!(averages)))
 }
 
+pub async fn get_assignments(Query(params): Query<LoginParams>) -> impl IntoResponse {
+    let url = params
+        .link
+        .clone()
+        .unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+
+    let client = match login_handler(&params.user, &params.pass, &url).await {
+        Ok(c) => c,
+        Err(err) if err == "Invalid username or password" => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "error": err })),
+            );
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e })),
+            );
+        }
+    };
+
+    let html = if let Some(six_weeks) = params.six_weeks.clone() {
+        match fetch_assignments_page_for_six_weeks(&client, &url, &six_weeks).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    } else {
+        match fetch_assignments_page(&client, &url).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    };
+
+    let assignments = extract_assignments(&html, params.short.unwrap_or(false));
+
+    (StatusCode::OK, Json(json!(assignments)))
+}

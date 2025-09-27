@@ -132,3 +132,72 @@ pub fn extract_averages(html: &str, short: bool) -> HashMap<String, String> {
     results
 }
 
+pub fn extract_assignments(html: &str, short: bool) -> HashMap<String, Vec<Vec<String>>> {
+    let document = Html::parse_document(html);
+    let class_selector = Selector::parse("div.AssignmentClass").unwrap();
+    let header_selector = Selector::parse("div.sg-header").unwrap();
+    let link_selector = Selector::parse("a.sg-header-heading").unwrap();
+    let table_selector = Selector::parse("table.sg-asp-table").unwrap();
+    let row_selector = Selector::parse("tr").unwrap();
+    let cell_selector = Selector::parse("td").unwrap();
+
+    let mut ret: HashMap<String, Vec<Vec<String>>> = HashMap::new();
+
+    for class_group in document.select(&class_selector) {
+        let header = class_group.select(&header_selector).next();
+        if header.is_none() {
+            continue;
+        }
+        let mut class_name = header
+            .unwrap()
+            .select(&link_selector)
+            .next()
+            .map(|el| el.text().collect::<String>())
+            .unwrap_or_default();
+
+        class_name = if class_name.len() > 12 {
+            class_name[12..].trim().to_string()
+        } else {
+            class_name.trim().to_string()
+        };
+
+        if short {
+            class_name = shorten_class_name(&class_name);
+        }
+
+        let mut assignments_for_class: Vec<Vec<String>> = Vec::new();
+
+        for table in class_group.select(&table_selector) {
+            for (i, row) in table.select(&row_selector).enumerate() {
+                let mut row_data = Vec::new();
+
+                for cell in row.select(&cell_selector) {
+                    let mut text = cell.text().collect::<String>();
+                    text = text.replace("*", "");
+                    text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+                    row_data.push(text);
+                }
+
+                if i == 0 {
+                    continue;
+                }
+
+                if !row_data.is_empty() {
+                    assignments_for_class.push(row_data);
+                }
+            }
+        }
+
+        if assignments_for_class.len() > 2 {
+            let len = assignments_for_class.len();
+            assignments_for_class.truncate(len - 2);
+        }
+
+        if !assignments_for_class.is_empty() {
+            ret.insert(class_name, assignments_for_class);
+        }
+    }
+
+    ret
+}
+

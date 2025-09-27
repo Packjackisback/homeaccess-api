@@ -60,6 +60,7 @@ fn format_six_weeks_param(input: &str) -> String {
         now.year()
     };
 
+
     format!("{}-{}", week, year)
 }
 

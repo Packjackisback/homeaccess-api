@@ -6,17 +6,17 @@ use axum::{
 };
 use serde_json::json;
 use serde::Deserialize;
-
 use crate::auth::login_handler;
-use crate::scraping::extract_name;
-use crate::scraping::extract_info;
-use crate::scraping::extract_classes;
+use crate::scraping::{extract_name, extract_info, extract_classes, extract_averages};
+use crate::fetchers::{fetch_info_page, fetch_assignments_page, fetch_name_page, fetch_assignments_page_for_six_weeks};
 
 #[derive(Deserialize)]
 pub struct LoginParams {
     pub user: String,
     pub pass: String,
     pub link: Option<String>,
+    pub short: Option<bool>,
+    pub six_weeks: Option<String>,
 }
 
 pub async fn root() -> impl IntoResponse {
@@ -33,34 +33,27 @@ pub async fn root() -> impl IntoResponse {
 
 
 pub async fn get_name(Query(params): Query<LoginParams>) -> impl IntoResponse {
-    let url = params.link.unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
-    
-    let result: Result<String, (StatusCode, Json<serde_json::Value>)> = async {
-        let client = login_handler(&params.user, &params.pass, &url)
-            .await
-            .map_err(|err| {
-                if err == "Invalid username or password" {
-                    (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })))
-                } else {
-                    (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": err })))
-                }
-            })?;
+    let base_url = params.link.unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
 
-        let endpoint = format!("{}/HomeAccess/Classes/Classwork", url);
-        let content = client.get(&endpoint)
-            .send().await
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to fetch classwork page" }))))?
-            .text().await
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to read response body" }))))?;
-        
-        extract_name(&content).ok_or_else(|| {
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to parse name" })))
-        })
-    }.await;
+    let client = match login_handler(&params.user, &params.pass, &base_url).await {
+        Ok(c) => c,
+        Err(err) if err == "Invalid username or password" => {
+            return (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })));
+        }
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+    };
 
-    match result {
-        Ok(name) => (StatusCode::OK, Json(json!({ "name": name }))),
-        Err(err_response) => err_response,
+    let html = match fetch_name_page(&client, &base_url).await {
+        Ok(body) => body,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+    };
+
+    match extract_name(&html) {
+        Some(name) => (StatusCode::OK, Json(json!({ "name": name }))),
+        None => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "Failed to parse name" })),
+        ),
     }
 }
 
@@ -75,27 +68,12 @@ pub async fn get_info(Query(params): Query<LoginParams>) -> impl IntoResponse {
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))),
     };
 
-    let endpoint = format!("{}/HomeAccess/Content/Student/Registration.aspx", url);
-    let response = match client.get(&endpoint).send().await {
-        Ok(resp) => resp,
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Failed to fetch registration page"})),
-            )
-        }
-    };
-    let body = match response.text().await {
-        Ok(text) => text,
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Failed to read response body"})),
-            )
-        }
+    let html = match fetch_info_page(&client, &url).await {
+        Ok(body) => body,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
     };
 
-    match extract_info(&body) {
+    match extract_info(&html) {
         Some(info) => (StatusCode::OK, Json(json!(info))),
         None => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -105,37 +83,61 @@ pub async fn get_info(Query(params): Query<LoginParams>) -> impl IntoResponse {
 }
 
 pub async fn get_classes(Query(params): Query<LoginParams>) -> impl IntoResponse {
-    let url = params.link.unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+    let url = params
+        .link
+        .clone()
+        .unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
 
     let client = match login_handler(&params.user, &params.pass, &url).await {
         Ok(c) => c,
         Err(err) if err == "Invalid username or password" => {
-            return (StatusCode::UNAUTHORIZED, Json(json!({"error": err})));
+            return (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })));
         }
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))),
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
     };
 
-    let endpoint = format!("{}/HomeAccess/Content/Student/Assignments.aspx", url);
-    let response = match client.get(&endpoint).send().await {
-        Ok(resp) => resp,
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Failed to fetch assignments page"})),
-            )
-        }
-    };
-
-    let body = match response.text().await {
-        Ok(text) => text,
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Failed to read response body"})),
-            )
+    let html = {
+        let six_weeks_opt = params.six_weeks.clone();
+        if let Some(six_weeks) = six_weeks_opt {
+            match fetch_assignments_page_for_six_weeks(&client, &url, &six_weeks).await {
+                Ok(body) => body,
+                Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+            }
+        } else {
+            match fetch_assignments_page(&client, &url).await {
+                Ok(body) => body,
+                Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+            }
         }
     };
 
-    let classes = extract_classes(&body);
+    let classes = extract_classes(&html, params.short.unwrap_or(false));
+
     (StatusCode::OK, Json(json!(classes)))
 }
+
+
+pub async fn get_averages(Query(params): Query<LoginParams>) -> impl IntoResponse {
+    let url = params
+        .link
+        .clone()
+        .unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+
+    let client = match login_handler(&params.user, &params.pass, &url).await {
+        Ok(c) => c,
+        Err(err) if err == "Invalid username or password" => {
+            return (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })));
+        }
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+    };
+
+    let html = match fetch_assignments_page(&client, &url).await {
+        Ok(html) => html,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+    };  
+
+    let averages = extract_averages(&html, params.short.unwrap_or(false));
+
+    (StatusCode::OK, Json(json!(averages)))
+}
+

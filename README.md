@@ -10,10 +10,9 @@ Implementation Order
 
 /api/assignments - Detailed assignments - Done
 
-/api/gradebook - Assignments + grades + weightings 
+/api/gradebook - Assignments + grades + weightings - Done 
 
 /api/reportcard - Report card tables
-
 
 /api/ipr - Interim progress report
 

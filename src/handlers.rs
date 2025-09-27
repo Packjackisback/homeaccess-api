@@ -7,7 +7,7 @@ use axum::{
 use serde_json::json;
 use serde::Deserialize;
 use crate::auth::login_handler;
-use crate::scraping::{extract_name, extract_info, extract_classes, extract_averages, extract_assignments};
+use crate::scraping::{extract_name, extract_info, extract_classes, extract_averages, extract_assignments, extract_gradebook, extract_weightings};
 use crate::fetchers::{fetch_info_page, fetch_assignments_page, fetch_name_page, fetch_assignments_page_for_six_weeks};
 
 #[derive(Deserialize)]
@@ -131,10 +131,28 @@ pub async fn get_averages(Query(params): Query<LoginParams>) -> impl IntoRespons
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
     };
 
-    let html = match fetch_assignments_page(&client, &url).await {
-        Ok(html) => html,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
-    };  
+    let html = if let Some(six_weeks) = params.six_weeks.clone() {
+        match fetch_assignments_page_for_six_weeks(&client, &url, &six_weeks).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    } else {
+        match fetch_assignments_page(&client, &url).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    };
+
 
     let averages = extract_averages(&html, params.short.unwrap_or(false));
 
@@ -189,3 +207,102 @@ pub async fn get_assignments(Query(params): Query<LoginParams>) -> impl IntoResp
 
     (StatusCode::OK, Json(json!(assignments)))
 }
+
+pub async fn get_weightings(Query(params): Query<LoginParams>) -> impl IntoResponse {
+    let url = params
+        .link
+        .clone()
+        .unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+
+    let client = match login_handler(&params.user, &params.pass, &url).await {
+        Ok(c) => c,
+        Err(err) if err == "Invalid username or password" => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "error": err })),
+            );
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e })),
+            );
+        }
+    };
+
+    let html = if let Some(six_weeks) = params.six_weeks.clone() {
+        match fetch_assignments_page_for_six_weeks(&client, &url, &six_weeks).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    } else {
+        match fetch_assignments_page(&client, &url).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    };
+    let weightings = extract_weightings(&html, params.short.unwrap_or(false));
+
+    (StatusCode::OK, Json(json!(weightings)))
+}
+
+
+pub async fn get_gradebook(Query(params): Query<LoginParams>) -> impl IntoResponse {
+    let url = params
+        .link
+        .clone()
+        .unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+
+    let client = match login_handler(&params.user, &params.pass, &url).await {
+        Ok(c) => c,
+        Err(err) if err == "Invalid username or password" => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "error": err })),
+            );
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e })),
+            );
+        }
+    };
+
+    let html = if let Some(six_weeks) = &params.six_weeks {
+        match fetch_assignments_page_for_six_weeks(&client, &url, six_weeks).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    } else {
+        match fetch_assignments_page(&client, &url).await {
+            Ok(body) => body,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
+            }
+        }
+    };
+    
+    let gradebook = extract_gradebook(&html, params.short.unwrap_or(false));
+    
+    (StatusCode::OK, Json(json!(gradebook)))
+}
+

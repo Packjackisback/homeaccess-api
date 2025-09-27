@@ -1,5 +1,8 @@
 use scraper::{Html, Selector};
 use std::collections::HashMap;
+use serde_json::{Value, Map};
+
+
 
 pub fn shorten_class_name(full: &str) -> String {
     let mut words: Vec<&str> = full.split_whitespace().collect();
@@ -21,6 +24,16 @@ pub fn shorten_class_name(full: &str) -> String {
     }
 
     words.join(" ")
+}
+
+fn normalize_class_name(name: &str, short: bool) -> String {
+    let name = name.trim();
+    let name = name.split("Classwork").next().unwrap_or(name).trim();
+    if short {
+        shorten_class_name(name)
+    } else {
+        name.to_string()
+    }
 }
 
 pub fn extract_name(body: &str) -> Option<String> {
@@ -103,16 +116,7 @@ pub fn extract_averages(html: &str, short: bool) -> HashMap<String, String> {
             .map(|h| h.text().collect::<Vec<_>>().join(" "))
             .unwrap_or_default();
 
-        let class_name = if short {
-            shorten_class_name(&header_text)
-        } else {
-            header_text
-                .split("Classwork")
-                .next()
-                .unwrap_or(&header_text)
-                .trim()
-                .to_string()
-        };
+        let class_name = normalize_class_name(&header_text, short);
 
         let average_text = assignment
             .select(&average_selector)
@@ -132,6 +136,62 @@ pub fn extract_averages(html: &str, short: bool) -> HashMap<String, String> {
     results
 }
 
+pub fn extract_weightings(html: &str, short: bool) -> HashMap<String, Vec<Vec<String>>> {
+    let document = Html::parse_document(html);
+    let class_selector = Selector::parse("div.AssignmentClass").unwrap();
+    let table_selector = Selector::parse("table.sg-asp-table").unwrap();
+    let row_selector = Selector::parse("tr").unwrap();
+    let cell_selector = Selector::parse("td").unwrap();
+    let header_selector = Selector::parse("div.sg-header").unwrap();
+    let heading_selector = Selector::parse("a.sg-header-heading").unwrap();
+
+    let mut weightings: HashMap<String, Vec<Vec<String>>> = HashMap::new();
+
+    for class_group in document.select(&class_selector) {
+        let header = match class_group.select(&header_selector).next() {
+            Some(h) => h,
+            None => continue,
+        };
+
+        
+        let header_text = header
+            .select(&heading_selector)
+            .next()
+            .map(|el| el.text().collect::<String>())
+            .unwrap_or_default();
+
+        let class_name = normalize_class_name(&header_text, short);
+
+
+        let mut class_weightings: Vec<Vec<String>> = Vec::new();
+
+        for table in class_group.select(&table_selector) {
+            if let Some(id) = table.value().attr("id") {
+                if id.contains("CourseCategories") {
+                    let rows: Vec<_> = table.select(&row_selector).collect();
+                    if rows.len() <= 1 { continue; }
+
+                    let rows_to_process = &rows[1..rows.len().saturating_sub(1)];
+
+                    for row in rows_to_process {
+                        let row_data: Vec<String> = row.select(&cell_selector)
+                            .map(|c| c.text().collect::<String>().trim().to_string())
+                            .collect();
+
+                        if row_data.is_empty() { continue; }
+                        class_weightings.push(row_data);
+                    }
+                }
+            }
+        }
+
+        if !class_weightings.is_empty() {
+            weightings.insert(class_name, class_weightings);
+        }
+    }
+
+    weightings
+}
 pub fn extract_assignments(html: &str, short: bool) -> HashMap<String, Vec<Vec<String>>> {
     let document = Html::parse_document(html);
     let class_selector = Selector::parse("div.AssignmentClass").unwrap();
@@ -144,53 +204,51 @@ pub fn extract_assignments(html: &str, short: bool) -> HashMap<String, Vec<Vec<S
     let mut ret: HashMap<String, Vec<Vec<String>>> = HashMap::new();
 
     for class_group in document.select(&class_selector) {
-        let header = class_group.select(&header_selector).next();
-        if header.is_none() {
-            continue;
-        }
-        let mut class_name = header
-            .unwrap()
+        let header = match class_group.select(&header_selector).next() {
+            Some(h) => h,
+            None => continue,
+        };
+
+        let header_text = header
             .select(&link_selector)
             .next()
             .map(|el| el.text().collect::<String>())
             .unwrap_or_default();
 
-        class_name = if class_name.len() > 12 {
-            class_name[12..].trim().to_string()
-        } else {
-            class_name.trim().to_string()
-        };
-
-        if short {
-            class_name = shorten_class_name(&class_name);
-        }
+        let class_name = normalize_class_name(&header_text, short);
 
         let mut assignments_for_class: Vec<Vec<String>> = Vec::new();
 
         for table in class_group.select(&table_selector) {
-            for (i, row) in table.select(&row_selector).enumerate() {
-                let mut row_data = Vec::new();
+            if let Some(id) = table.value().attr("id") {
+                if id.contains("CourseAssignments") {
+                    let rows: Vec<_> = table.select(&row_selector).collect();
+                    if rows.len() <= 2 { continue; }
+                    
 
-                for cell in row.select(&cell_selector) {
-                    let mut text = cell.text().collect::<String>();
-                    text = text.replace("*", "");
-                    text = text.split_whitespace().collect::<Vec<_>>().join(" ");
-                    row_data.push(text);
-                }
+                    let rows_to_process = &rows[1..rows.len().saturating_sub(2)];
 
-                if i == 0 {
-                    continue;
-                }
+                    for row in rows_to_process {
+                        let row_data: Vec<String> = row.select(&cell_selector)
+                            .map(|cell| cell.text().collect::<String>()
+                                .replace("*", "")
+                                .split_whitespace()
+                                .collect::<Vec<_>>()
+                                .join(" "))
+                            .collect();
 
-                if !row_data.is_empty() {
-                    assignments_for_class.push(row_data);
+                        if row_data.is_empty() { continue; }
+
+                        if let Some(first) = row_data.get(0) {
+                            if ["Major", "Minor", "Other", "Total"].contains(&first.as_str()) {
+                                continue;
+                            }
+                        }
+
+                        assignments_for_class.push(row_data);
+                    }
                 }
             }
-        }
-
-        if assignments_for_class.len() > 2 {
-            let len = assignments_for_class.len();
-            assignments_for_class.truncate(len - 2);
         }
 
         if !assignments_for_class.is_empty() {
@@ -201,3 +259,54 @@ pub fn extract_assignments(html: &str, short: bool) -> HashMap<String, Vec<Vec<S
     ret
 }
 
+pub fn extract_gradebook(html: &str, short: bool) -> Map<String, Value> {
+    let averages = extract_averages(html, short);
+    let assignments = extract_assignments(html, short);
+    let weightings = extract_weightings(html, short);
+    
+    let mut combined = Map::new();
+    
+    let mut all_classes: std::collections::HashSet<String> = std::collections::HashSet::new();
+    all_classes.extend(averages.keys().cloned());
+    all_classes.extend(assignments.keys().cloned());
+    all_classes.extend(weightings.keys().cloned());
+    
+    for class_name in all_classes {
+        let mut class_obj = Map::new();
+        
+        class_obj.insert(
+            "average".to_string(),
+            Value::String(averages.get(&class_name).unwrap_or(&String::new()).clone())
+        );
+        
+        class_obj.insert(
+            "assignments".to_string(),
+            Value::Array(
+                assignments.get(&class_name)
+                    .unwrap_or(&Vec::new())
+                    .iter()
+                    .map(|row| Value::Array(
+                        row.iter().map(|cell| Value::String(cell.clone())).collect()
+                    ))
+                    .collect()
+            )
+        );
+        
+        class_obj.insert(
+            "weightings".to_string(),
+            Value::Array(
+                weightings.get(&class_name)
+                    .unwrap_or(&Vec::new())
+                    .iter()
+                    .map(|row| Value::Array(
+                        row.iter().map(|cell| Value::String(cell.clone())).collect()
+                    ))
+                    .collect()
+            )
+        );
+        
+        combined.insert(class_name, Value::Object(class_obj));
+    }
+    
+    combined
+}

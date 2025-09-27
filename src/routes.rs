@@ -1,5 +1,5 @@
 use axum::{routing::get, Router};
-use crate::handlers::{get_averages, get_classes, get_info, get_name, get_assignments, root};
+use crate::handlers::{get_averages, get_classes, get_info, get_name, get_assignments, get_gradebook, get_weightings, root};
 
 pub fn create_router() -> Router {
     Router::new()
@@ -10,5 +10,7 @@ pub fn create_router() -> Router {
         .route("/api/classes", get(get_classes))
         .route("/api/averages", get(get_averages))
         .route("/api/assignments", get(get_assignments))
+        .route("/api/gradebook", get(get_gradebook))
+        .route("/api/weightings", get(get_weightings))
 }
 

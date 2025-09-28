@@ -4,44 +4,63 @@ use chrono::Utc;
 use scraper::{Html, Selector};
 use std::collections::HashMap;
 
-
-pub async fn fetch_info_page(client: &Client, base_url: &str) -> Result<String, String> {
-    let url = format!("{}/HomeAccess/Content/Student/Registration.aspx", base_url);
+async fn fetch_page(
+    client: &Client,
+    base_url: &str,
+    endpoint: &str,
+) -> Result<String, String> {
+    let url = format!("{}/HomeAccess/Content/Student/{}", base_url, endpoint);
 
     let response = client
         .get(&url)
         .send()
         .await
-        .map_err(|_| "Failed to fetch registration page".to_string())?;
+        .map_err(|_| format!("Failed to fetch {} page", endpoint))?;
 
     let body = response
         .text()
         .await
-        .map_err(|_| "Failed to read registration page body".to_string())?;
+        .map_err(|_| format!("Failed to read {} page body", endpoint))?;
 
     Ok(body)
 }
 
-pub async fn fetch_assignments_page(
-    client: &Client,
-    base_url: &str,
-) -> Result<String, String> {
-    let url = format!("{}/HomeAccess/Content/Student/Assignments.aspx", base_url);
+pub async fn fetch_info_page(client: &Client, base_url: &str) -> Result<String, String> {
+    fetch_page(client, base_url, "Registration.aspx").await
+}
 
-    let resp = client
+pub async fn fetch_assignments_page(client: &Client, base_url: &str) -> Result<String, String> {
+    fetch_page(client, base_url, "Assignments.aspx").await
+}
+
+pub async fn fetch_report_page(client: &Client, base_url: &str) -> Result<String, String> {
+    fetch_page(client, base_url, "ReportCards.aspx").await
+}
+
+pub async fn fetch_progress_page(client: &Client, base_url: &str) -> Result<String, String> {
+    fetch_page(client, base_url, "InterimProgress.aspx").await
+}
+
+pub async fn fetch_transcript_page(client: &Client, base_url: &str) -> Result<String, String> {
+    fetch_page(client, base_url, "Transcript.aspx").await
+}
+
+pub async fn fetch_name_page(client: &Client, base_url: &str) -> Result<String, String> {
+    let url = format!("{}/HomeAccess/Classes/Classwork", base_url);
+
+    let response = client
         .get(&url)
         .send()
         .await
-        .map_err(|_| "Failed to fetch assignments page".to_string())?;
+        .map_err(|_| "Failed to fetch classwork page".to_string())?;
 
-    let html = resp
+    let body = response
         .text()
         .await
-        .map_err(|_| "Failed to read assignments page".to_string())?;
+        .map_err(|_| "Failed to read classwork page body".to_string())?;
 
-    Ok(html)
+    Ok(body)
 }
-
 
 fn format_six_weeks_param(input: &str) -> String {
     if input.eq_ignore_ascii_case("ALL") {
@@ -59,7 +78,6 @@ fn format_six_weeks_param(input: &str) -> String {
     } else {
         now.year()
     };
-
 
     format!("{}-{}", week, year)
 }
@@ -121,7 +139,7 @@ pub async fn fetch_assignments_page_for_six_weeks(
         form_data.insert("ctl00$plnMain$ddlOrderBy", "Class".to_string());
 
         form_data
-    }; 
+    };
 
     let post_resp = client
         .post(&assignments_url)
@@ -136,71 +154,4 @@ pub async fn fetch_assignments_page_for_six_weeks(
         .map_err(|_| "Failed to read assignments response".to_string())?;
 
     Ok(post_body)
-}
-pub async fn fetch_name_page(client: &Client, base_url: &str) -> Result<String, String> {
-    let url = format!("{}/HomeAccess/Classes/Classwork", base_url);
-
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|_| "Failed to fetch classwork page".to_string())?;
-
-    let body = response
-        .text()
-        .await
-        .map_err(|_| "Failed to read classwork page body".to_string())?;
-
-    Ok(body)
-}
-
-pub async fn fetch_report_page(client: &reqwest::Client, base_url: &str) -> Result<String, String> {
-    let url = format!("{}/HomeAccess/Content/Student/ReportCards.aspx", base_url);
-
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|_| "Failed to fetch report page".to_string())?;
-
-    let body = response
-        .text()
-        .await
-        .map_err(|_| "Failed to read report page body".to_string())?;
-
-    Ok(body)
-}
-
-pub async fn fetch_progress_page(client: &Client, base_url: &str) -> Result<String, String> {
-    let url = format!("{}/HomeAccess/Content/Student/InterimProgress.aspx", base_url);
-
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|_| "Failed to fetch progress page".to_string())?;
-
-    let body = response
-        .text()
-        .await
-        .map_err(|_| "Failed to read progress page body".to_string())?;
-
-    Ok(body)
-}
-
-pub async fn fetch_transcript_page(client: &Client, base_url: &str) -> Result<String, String> {
-    let url = format!("{}/HomeAccess/Content/Student/Transcript.aspx", base_url);
-
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|_| "Failed to fetch transcript page".to_string())?;
-
-    let body = response
-        .text()
-        .await
-        .map_err(|_| "Failed to read transcript page body".to_string())?;
-
-    Ok(body)
 }

@@ -187,3 +187,20 @@ pub async fn fetch_progress_page(client: &Client, base_url: &str) -> Result<Stri
 
     Ok(body)
 }
+
+pub async fn fetch_transcript_page(client: &Client, base_url: &str) -> Result<String, String> {
+    let url = format!("{}/HomeAccess/Content/Student/Transcript.aspx", base_url);
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|_| "Failed to fetch transcript page".to_string())?;
+
+    let body = response
+        .text()
+        .await
+        .map_err(|_| "Failed to read transcript page body".to_string())?;
+
+    Ok(body)
+}

@@ -7,8 +7,8 @@ use axum::{
 use serde_json::json;
 use serde::Deserialize;
 use crate::auth::login_handler;
-use crate::scraping::{extract_assignments, extract_averages, extract_classes, extract_gradebook, extract_info, extract_name, extract_report_cards, extract_weightings, extract_progress};
-use crate::fetchers::{fetch_info_page, fetch_assignments_page, fetch_name_page, fetch_assignments_page_for_six_weeks, fetch_report_page, fetch_progress_page};
+use crate::scraping::{extract_assignments, extract_averages, extract_classes, extract_gradebook, extract_info, extract_name, extract_report_cards, extract_weightings, extract_progress, extract_transcript, extract_rank};
+use crate::fetchers::{fetch_info_page, fetch_assignments_page, fetch_name_page, fetch_assignments_page_for_six_weeks, fetch_report_page, fetch_progress_page, fetch_transcript_page};
 
 #[derive(Deserialize)]
 pub struct LoginParams {
@@ -368,5 +368,69 @@ pub async fn get_progress_report(Query(params): Query<LoginParams>) -> impl Into
     let progressreport = extract_progress(&html);
     
     (StatusCode::OK, Json(json!(progressreport)))
+}
+
+pub async fn get_transcript(Query(params): Query<LoginParams>) -> impl IntoResponse {
+    let url = params
+        .link
+        .clone()
+        .unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+
+    let client = match login_handler(&params.user, &params.pass, &url).await {
+        Ok(c) => c,
+        Err(err) if err == "Invalid username or password" => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "error": err })),
+            );
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e })),
+            );
+        }
+    };
+
+    let html = match fetch_transcript_page(&client, &url).await {
+        Ok(body) => body,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+    };   
+
+    let progressreport = extract_transcript(&html);
+    
+    (StatusCode::OK, Json(json!(progressreport)))
+}
+
+pub async fn get_rank(Query(params): Query<LoginParams>) -> impl IntoResponse {
+    let url = params
+        .link
+        .clone()
+        .unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+
+    let client = match login_handler(&params.user, &params.pass, &url).await {
+        Ok(c) => c,
+        Err(err) if err == "Invalid username or password" => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "error": err })),
+            );
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e })),
+            );
+        }
+    };
+
+    let html = match fetch_transcript_page(&client, &url).await {
+        Ok(body) => body,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+    };   
+
+    let rank = extract_rank(&html);
+    
+    (StatusCode::OK, Json(json!(rank)))
 }
 

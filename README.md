@@ -16,6 +16,6 @@ Implementation Order
 
 /api/ipr - Interim progress report - Done
 
-/api/transcript - Full transcript with GPA and semesters
+/api/transcript - Full transcript with GPA and semesters - Done
 
-/api/rank - GPA rank and quartile
+/api/rank - GPA rank and quartile - Done

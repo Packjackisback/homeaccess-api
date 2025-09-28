@@ -1,8 +1,6 @@
 use scraper::{Html, Selector};
 use std::collections::HashMap;
-use serde_json::{Value, Map};
-
-
+use serde_json::{Value, Map, json};
 
 pub fn shorten_class_name(full: &str) -> String {
     let mut words: Vec<&str> = full.split_whitespace().collect();
@@ -375,3 +373,141 @@ pub fn extract_progress(html: &str) -> Vec<Vec<String>> {
     data 
 }
 
+pub fn extract_transcript(html: &str) -> HashMap<String, Value> {
+    let document = Html::parse_document(html);
+
+    let mut transcript: HashMap<String, Value> = HashMap::new();
+
+    let group_selector = Selector::parse("td.sg-transcript-group").unwrap();
+    let span_selector = Selector::parse("table > tbody > tr > td > span").unwrap();
+    let row_selector = Selector::parse("table:nth-child(2) > tbody > tr").unwrap();
+    let cell_selector = Selector::parse("td").unwrap();
+    let credit_selector = Selector::parse("table:nth-child(3) > tbody > tr > td > label").unwrap();
+
+    for group in document.select(&group_selector) {
+        let mut semester = serde_json::Map::new();
+
+        for span in group.select(&span_selector) {
+            if let Some(id) = span.value().attr("id") {
+                let text = span.text().collect::<Vec<_>>().join("").trim().to_string();
+                if id.contains("YearValue") {
+                    semester.insert("year".to_string(), json!(text));
+                } else if id.contains("GroupValue") {
+                    semester.insert("semester".to_string(), json!(text));
+                } else if id.contains("GradeValue") {
+                    semester.insert("grade".to_string(), json!(text));
+                } else if id.contains("BuildingValue") {
+                    semester.insert("school".to_string(), json!(text));
+                }
+            }
+        }
+
+        let mut final_data: Vec<Vec<String>> = Vec::new();
+        for (i, row) in group.select(&row_selector).enumerate() {
+            if i==0 {
+                continue;
+            }
+            if let Some(class_attr) = row.value().attr("class") {
+                if class_attr.contains("sg-asp-table-header-row") 
+                    || class_attr.contains("sg-asp-table-data-row") 
+                {
+                    let mut data_row: Vec<String> = Vec::new();
+                    for cell in row.select(&cell_selector) {
+                        let text = cell.text().collect::<Vec<_>>().join("").trim().to_string();
+                        data_row.push(text);
+                    }
+                    if !data_row.is_empty() {
+                        final_data.push(data_row);
+                    }
+                }
+            }
+        }
+        semester.insert("data".to_string(), json!(final_data));
+
+        for label in group.select(&credit_selector) {
+            if let Some(id) = label.value().attr("id") {
+                if id.contains("CreditValue") {
+                    let text = label.text().collect::<Vec<_>>().join("").trim().to_string();
+                    semester.insert("credits".to_string(), json!(text));
+                }
+            }
+        }
+
+        let year = semester.get("year").and_then(|v| v.as_str()).unwrap_or("");
+        let sem_num = semester.get("semester").and_then(|v| v.as_str()).unwrap_or("");
+        let title = format!("{} - Semester {}", year, sem_num);
+
+        transcript.insert(title, Value::Object(semester));
+    }
+
+    let gpa_selector = Selector::parse("table#plnMain_rpTranscriptGroup_tblCumGPAInfo tbody > tr.sg-asp-table-data-row").unwrap();
+    let span_selector2 = Selector::parse("td > span").unwrap();
+
+    for row in document.select(&gpa_selector) {
+        let mut label = String::new();
+        let mut value = String::new();
+
+        for span in row.select(&span_selector2) {
+            if let Some(id) = span.value().attr("id") {
+                let text = span.text().collect::<Vec<_>>().join("").trim().to_string();
+                if id.contains("GPADescr") {
+                    label = text.clone();
+                }
+                if id.contains("GPACum") {
+                    value = text.clone();
+                }
+                if id.contains("GPARank") {
+                    transcript.insert("rank".to_string(), json!(text));
+                }
+                if id.contains("GPAQuartile") {
+                    transcript.insert("quartile".to_string(), json!(text));
+                }
+            }
+        }
+
+        if !label.is_empty() && !value.is_empty() {
+            transcript.insert(label, json!(value));
+        }
+    }
+
+    transcript
+}
+
+pub fn extract_rank(html: &str) -> HashMap<String, Value> {
+    let document = Html::parse_document(html);
+    let mut rank_info: HashMap<String, Value> = HashMap::new();
+
+    let gpa_selector = Selector::parse(
+        "table#plnMain_rpTranscriptGroup_tblCumGPAInfo tbody > tr.sg-asp-table-data-row"
+    ).unwrap();
+    let span_selector = Selector::parse("td > span").unwrap();
+
+    for row in document.select(&gpa_selector) {
+        let mut label = String::new();
+        let mut value = String::new();
+
+        for span in row.select(&span_selector) {
+            if let Some(id) = span.value().attr("id") {
+                let text = span.text().collect::<Vec<_>>().join("").trim().to_string();
+                if id.contains("GPADescr") {
+                    label = text.clone();
+                }
+                if id.contains("GPACum") {
+                    value = text.clone();
+                }
+                if id.contains("GPARank") {
+                    rank_info.insert("rank".to_string(), json!(text));
+                }
+                if id.contains("GPAQuartile") {
+                    rank_info.insert("quartile".to_string(), json!(text));
+                }
+            }
+        }
+
+        if !label.is_empty() && !value.is_empty() {
+            rank_info.insert(label, json!(value));
+        }
+    }
+
+    rank_info
+}

@@ -1,7 +1,8 @@
 use axum::{routing::get, Router};
+use crate::cache::Cache;
 use crate::handlers::{root, get_averages, get_classes, get_info, get_name, get_assignments, get_gradebook, get_weightings, get_report_card, get_progress_report, get_transcript, get_rank};
 
-pub fn create_router() -> Router {
+pub fn create_router(cache: Cache) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/api/", get(root))
@@ -16,5 +17,6 @@ pub fn create_router() -> Router {
         .route("/api/ipr", get(get_progress_report))
         .route("/api/transcript", get(get_transcript))
         .route("/api/rank", get(get_rank))
+        .with_state(cache)
 }
 

@@ -1,5 +1,5 @@
 use axum::{
-    extract::Query,
+    extract::{Query, State},
     http::StatusCode,
     response::Json,
     response::IntoResponse,
@@ -7,6 +7,7 @@ use axum::{
 use serde_json::json;
 use serde::Deserialize;
 use crate::auth::login_handler;
+use crate::cache::Cache;
 use crate::scraping::{extract_assignments, extract_averages, extract_classes, extract_gradebook, extract_info, extract_name, extract_report_cards, extract_weightings, extract_progress, extract_transcript, extract_rank};
 use crate::fetchers::{fetch_info_page, fetch_assignments_page, fetch_name_page, fetch_assignments_page_for_six_weeks, fetch_report_page, fetch_progress_page, fetch_transcript_page};
 
@@ -17,6 +18,29 @@ pub struct LoginParams {
     pub link: Option<String>,
     pub short: Option<bool>,
     pub six_weeks: Option<String>,
+    pub no_cache: Option<bool>,
+}
+
+async fn get_or_login(
+    cache: &Cache,
+    username: &str,
+    password: &str,
+    url: &str,
+    no_cache: bool,
+) -> Result<reqwest::Client, String> {
+    if !no_cache {
+        if let Some(client) = cache.get_client(username, url).await {
+            return Ok(client);
+        }
+    }
+
+    let client = login_handler(username, password, url).await?;
+    
+    if !no_cache {
+        cache.set_client(username, url, client.clone()).await;
+    }
+    
+    Ok(client)
 }
 
 macro_rules! endpoint {
@@ -24,10 +48,14 @@ macro_rules! endpoint {
         $name:ident,
         assignments_page_scraper: $extract_fn:path
     ) => {
-        pub async fn $name(Query(params): Query<LoginParams>) -> impl IntoResponse {
+        pub async fn $name(
+            State(cache): State<Cache>,
+            Query(params): Query<LoginParams>
+        ) -> impl IntoResponse {
             let url = params.link.clone().unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+            let no_cache = params.no_cache.unwrap_or(false);
 
-            let client = match login_handler(&params.user, &params.pass, &url).await {
+            let client = match get_or_login(&cache, &params.user, &params.pass, &url, no_cache).await {
                 Ok(c) => c,
                 Err(err) if err == "Invalid username or password" => {
                     return (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })));
@@ -35,16 +63,13 @@ macro_rules! endpoint {
                 Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
 
-            let html = if let Some(six_weeks) = params.six_weeks.clone() {
-                match fetch_assignments_page_for_six_weeks(&client, &url, &six_weeks).await {
-                    Ok(body) => body,
-                    Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
-                }
+            let html = match if let Some(ref six_weeks) = params.six_weeks {
+                fetch_assignments_page_for_six_weeks(&client, &url, six_weeks).await
             } else {
-                match fetch_assignments_page(&client, &url).await {
-                    Ok(body) => body,
-                    Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
-                }
+                fetch_assignments_page(&client, &url, &cache, &params.user, no_cache).await
+            } {
+                Ok(body) => body,
+                Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
 
             let data = $extract_fn(&html, params.short.unwrap_or(false));
@@ -53,7 +78,6 @@ macro_rules! endpoint {
         }
     };
 
-
     (
         $name:ident,
         single_page: $fetch_fn:path,
@@ -61,10 +85,14 @@ macro_rules! endpoint {
         error_msg: $error_msg:expr,
         key: name
     ) => {
-        pub async fn $name(Query(params): Query<LoginParams>) -> impl IntoResponse {
+        pub async fn $name(
+            State(cache): State<Cache>,
+            Query(params): Query<LoginParams>
+        ) -> impl IntoResponse {
             let url = params.link.clone().unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+            let no_cache = params.no_cache.unwrap_or(false);
 
-            let client = match login_handler(&params.user, &params.pass, &url).await {
+            let client = match get_or_login(&cache, &params.user, &params.pass, &url, no_cache).await {
                 Ok(c) => c,
                 Err(err) if err == "Invalid username or password" => {
                     return (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })));
@@ -72,7 +100,7 @@ macro_rules! endpoint {
                 Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
 
-            let html = match $fetch_fn(&client, &url).await {
+            let html = match $fetch_fn(&client, &url, &cache, &params.user, no_cache).await {
                 Ok(body) => body,
                 Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
@@ -86,16 +114,21 @@ macro_rules! endpoint {
             }
         }
     };
+
     (
         $name:ident,
         single_page: $fetch_fn:path,
         $extract_fn:path,
         error_msg: $error_msg:expr
     ) => {
-        pub async fn $name(Query(params): Query<LoginParams>) -> impl IntoResponse {
+        pub async fn $name(
+            State(cache): State<Cache>,
+            Query(params): Query<LoginParams>
+        ) -> impl IntoResponse {
             let url = params.link.clone().unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+            let no_cache = params.no_cache.unwrap_or(false);
 
-            let client = match login_handler(&params.user, &params.pass, &url).await {
+            let client = match get_or_login(&cache, &params.user, &params.pass, &url, no_cache).await {
                 Ok(c) => c,
                 Err(err) if err == "Invalid username or password" => {
                     return (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })));
@@ -103,7 +136,7 @@ macro_rules! endpoint {
                 Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
 
-            let html = match $fetch_fn(&client, &url).await {
+            let html = match $fetch_fn(&client, &url, &cache, &params.user, no_cache).await {
                 Ok(body) => body,
                 Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
@@ -123,10 +156,14 @@ macro_rules! endpoint {
         vec_result: $fetch_fn:path,
         $extract_fn:path
     ) => {
-        pub async fn $name(Query(params): Query<LoginParams>) -> impl IntoResponse {
+        pub async fn $name(
+            State(cache): State<Cache>,
+            Query(params): Query<LoginParams>
+        ) -> impl IntoResponse {
             let url = params.link.clone().unwrap_or_else(|| "https://homeaccess.katyisd.org".to_string());
+            let no_cache = params.no_cache.unwrap_or(false);
 
-            let client = match login_handler(&params.user, &params.pass, &url).await {
+            let client = match get_or_login(&cache, &params.user, &params.pass, &url, no_cache).await {
                 Ok(c) => c,
                 Err(err) if err == "Invalid username or password" => {
                     return (StatusCode::UNAUTHORIZED, Json(json!({ "error": err })));
@@ -134,7 +171,7 @@ macro_rules! endpoint {
                 Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
 
-            let html = match $fetch_fn(&client, &url).await {
+            let html = match $fetch_fn(&client, &url, &cache, &params.user, no_cache).await {
                 Ok(body) => body,
                 Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
             };
@@ -146,15 +183,14 @@ macro_rules! endpoint {
     };
 }
 
-
-
 pub async fn root() -> impl IntoResponse {
     let message = json!({
         "title": "Welcome to the Home Access Center API!",
         "message": "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/",
         "routes": [
             "/api/name", "/api/assignments", "/api/info", "/api/averages", "/api/weightings", "/api/classes", "/api/reportcard", "/api/ipr", "/api/transcript", "/api/rank"
-        ]
+        ],
+        "cache_param": "Add ?no_cache=true to any endpoint to bypass cache"
     });
     Json(message)
 }
@@ -222,4 +258,3 @@ endpoint!(
     vec_result: fetch_transcript_page,
     extract_rank
 );
-

@@ -3,6 +3,7 @@ use chrono::Datelike;
 use chrono::Utc;
 use scraper::{Html, Selector};
 use std::collections::HashMap;
+use crate::cache::Cache;
 
 async fn fetch_page(
     client: &Client,
@@ -25,27 +26,129 @@ async fn fetch_page(
     Ok(body)
 }
 
-pub async fn fetch_info_page(client: &Client, base_url: &str) -> Result<String, String> {
-    fetch_page(client, base_url, "Registration.aspx").await
+pub async fn fetch_info_page(
+    client: &Client,
+    base_url: &str,
+    cache: &Cache,
+    username: &str,
+    no_cache: bool,
+) -> Result<String, String> {
+    if !no_cache {
+        if let Some(cached) = cache.get_page(username, base_url, "Registration.aspx", "").await {
+            return Ok(cached);
+        }
+    }
+
+    let html = fetch_page(client, base_url, "Registration.aspx").await?;
+    
+    if !no_cache {
+        cache.set_page(username, base_url, "Registration.aspx", "", html.clone()).await;
+    }
+    
+    Ok(html)
 }
 
-pub async fn fetch_assignments_page(client: &Client, base_url: &str) -> Result<String, String> {
-    fetch_page(client, base_url, "Assignments.aspx").await
+pub async fn fetch_assignments_page(
+    client: &Client,
+    base_url: &str,
+    cache: &Cache,
+    username: &str,
+    no_cache: bool,
+) -> Result<String, String> {
+    if !no_cache {
+        if let Some(cached) = cache.get_page(username, base_url, "Assignments.aspx", "current").await {
+            return Ok(cached);
+        }
+    }
+
+    let html = fetch_page(client, base_url, "Assignments.aspx").await?;
+    
+    if !no_cache {
+        cache.set_page(username, base_url, "Assignments.aspx", "current", html.clone()).await;
+    }
+    
+    Ok(html)
 }
 
-pub async fn fetch_report_page(client: &Client, base_url: &str) -> Result<String, String> {
-    fetch_page(client, base_url, "ReportCards.aspx").await
+pub async fn fetch_report_page(
+    client: &Client,
+    base_url: &str,
+    cache: &Cache,
+    username: &str,
+    no_cache: bool,
+) -> Result<String, String> {
+    if !no_cache {
+        if let Some(cached) = cache.get_page(username, base_url, "ReportCards.aspx", "").await {
+            return Ok(cached);
+        }
+    }
+
+    let html = fetch_page(client, base_url, "ReportCards.aspx").await?;
+    
+    if !no_cache {
+        cache.set_page(username, base_url, "ReportCards.aspx", "", html.clone()).await;
+    }
+    
+    Ok(html)
 }
 
-pub async fn fetch_progress_page(client: &Client, base_url: &str) -> Result<String, String> {
-    fetch_page(client, base_url, "InterimProgress.aspx").await
+pub async fn fetch_progress_page(
+    client: &Client,
+    base_url: &str,
+    cache: &Cache,
+    username: &str,
+    no_cache: bool,
+) -> Result<String, String> {
+    if !no_cache {
+        if let Some(cached) = cache.get_page(username, base_url, "InterimProgress.aspx", "").await {
+            return Ok(cached);
+        }
+    }
+
+    let html = fetch_page(client, base_url, "InterimProgress.aspx").await?;
+    
+    if !no_cache {
+        cache.set_page(username, base_url, "InterimProgress.aspx", "", html.clone()).await;
+    }
+    
+    Ok(html)
 }
 
-pub async fn fetch_transcript_page(client: &Client, base_url: &str) -> Result<String, String> {
-    fetch_page(client, base_url, "Transcript.aspx").await
+pub async fn fetch_transcript_page(
+    client: &Client,
+    base_url: &str,
+    cache: &Cache,
+    username: &str,
+    no_cache: bool,
+) -> Result<String, String> {
+    if !no_cache {
+        if let Some(cached) = cache.get_page(username, base_url, "Transcript.aspx", "").await {
+            return Ok(cached);
+        }
+    }
+
+    let html = fetch_page(client, base_url, "Transcript.aspx").await?;
+    
+    if !no_cache {
+        cache.set_page(username, base_url, "Transcript.aspx", "", html.clone()).await;
+    }
+    
+    Ok(html)
 }
 
-pub async fn fetch_name_page(client: &Client, base_url: &str) -> Result<String, String> {
+pub async fn fetch_name_page(
+    client: &Client,
+    base_url: &str,
+    cache: &Cache,
+    username: &str,
+    no_cache: bool,
+) -> Result<String, String> {
+    if !no_cache {
+        if let Some(cached) = cache.get_page(username, base_url, "Classwork", "").await {
+            return Ok(cached);
+        }
+    }
+
     let url = format!("{}/HomeAccess/Classes/Classwork", base_url);
 
     let response = client
@@ -54,12 +157,16 @@ pub async fn fetch_name_page(client: &Client, base_url: &str) -> Result<String, 
         .await
         .map_err(|_| "Failed to fetch classwork page".to_string())?;
 
-    let body = response
+    let html = response
         .text()
         .await
         .map_err(|_| "Failed to read classwork page body".to_string())?;
 
-    Ok(body)
+    if !no_cache {
+        cache.set_page(username, base_url, "Classwork", "", html.clone()).await;
+    }
+
+    Ok(html)
 }
 
 fn format_six_weeks_param(input: &str) -> String {
@@ -102,44 +209,7 @@ pub async fn fetch_assignments_page_for_six_weeks(
         .await
         .map_err(|_| "Failed to read assignments page".to_string())?;
 
-    let payload = {
-        let document = Html::parse_document(&body);
-
-        let viewstate = document
-            .select(&Selector::parse("input[name='__VIEWSTATE']").unwrap())
-            .next()
-            .and_then(|el| el.value().attr("value"))
-            .unwrap_or("")
-            .to_string();
-
-        let generator = document
-            .select(&Selector::parse("input[name='__VIEWSTATEGENERATOR']").unwrap())
-            .next()
-            .and_then(|el| el.value().attr("value"))
-            .unwrap_or("")
-            .to_string();
-
-        let validation = document
-            .select(&Selector::parse("input[name='__EVENTVALIDATION']").unwrap())
-            .next()
-            .and_then(|el| el.value().attr("value"))
-            .unwrap_or("")
-            .to_string();
-
-        let mut form_data: HashMap<&str, String> = HashMap::new();
-        form_data.insert("__EVENTTARGET", "ctl00$plnMain$btnRefreshView".to_string());
-        form_data.insert("__EVENTARGUMENT", "".to_string());
-        form_data.insert("__LASTFOCUS", "".to_string());
-        form_data.insert("__VIEWSTATE", viewstate);
-        form_data.insert("__VIEWSTATEGENERATOR", generator);
-        form_data.insert("__EVENTVALIDATION", validation);
-        form_data.insert("ctl00$plnMain$ddlReportCardRuns", adjusted_six_weeks);
-        form_data.insert("ctl00$plnMain$ddlClasses", "ALL".to_string());
-        form_data.insert("ctl00$plnMain$ddlCompetencies", "ALL".to_string());
-        form_data.insert("ctl00$plnMain$ddlOrderBy", "Class".to_string());
-
-        form_data
-    };
+    let payload = extract_form_data(&body, &adjusted_six_weeks);
 
     let post_resp = client
         .post(&assignments_url)
@@ -154,4 +224,57 @@ pub async fn fetch_assignments_page_for_six_weeks(
         .map_err(|_| "Failed to read assignments response".to_string())?;
 
     Ok(post_body)
+}
+
+fn extract_form_data(body: &str, adjusted_six_weeks: &str) -> HashMap<&'static str, String> {
+    let document = Html::parse_document(body);
+
+    static VIEWSTATE_SEL: std::sync::OnceLock<Selector> = std::sync::OnceLock::new();
+    static GENERATOR_SEL: std::sync::OnceLock<Selector> = std::sync::OnceLock::new();
+    static VALIDATION_SEL: std::sync::OnceLock<Selector> = std::sync::OnceLock::new();
+
+    let viewstate_sel = VIEWSTATE_SEL.get_or_init(|| {
+        Selector::parse("input[name='__VIEWSTATE']").unwrap()
+    });
+    let generator_sel = GENERATOR_SEL.get_or_init(|| {
+        Selector::parse("input[name='__VIEWSTATEGENERATOR']").unwrap()
+    });
+    let validation_sel = VALIDATION_SEL.get_or_init(|| {
+        Selector::parse("input[name='__EVENTVALIDATION']").unwrap()
+    });
+
+    let viewstate = document
+        .select(viewstate_sel)
+        .next()
+        .and_then(|el| el.value().attr("value"))
+        .unwrap_or("")
+        .to_string();
+
+    let generator = document
+        .select(generator_sel)
+        .next()
+        .and_then(|el| el.value().attr("value"))
+        .unwrap_or("")
+        .to_string();
+
+    let validation = document
+        .select(validation_sel)
+        .next()
+        .and_then(|el| el.value().attr("value"))
+        .unwrap_or("")
+        .to_string();
+
+    let mut form_data: HashMap<&str, String> = HashMap::new();
+    form_data.insert("__EVENTTARGET", "ctl00$plnMain$btnRefreshView".to_string());
+    form_data.insert("__EVENTARGUMENT", "".to_string());
+    form_data.insert("__LASTFOCUS", "".to_string());
+    form_data.insert("__VIEWSTATE", viewstate);
+    form_data.insert("__VIEWSTATEGENERATOR", generator);
+    form_data.insert("__EVENTVALIDATION", validation);
+    form_data.insert("ctl00$plnMain$ddlReportCardRuns", adjusted_six_weeks.to_string());
+    form_data.insert("ctl00$plnMain$ddlClasses", "ALL".to_string());
+    form_data.insert("ctl00$plnMain$ddlCompetencies", "ALL".to_string());
+    form_data.insert("ctl00$plnMain$ddlOrderBy", "Class".to_string());
+
+    form_data
 }

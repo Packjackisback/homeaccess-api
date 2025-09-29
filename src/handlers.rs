@@ -153,9 +153,7 @@ pub async fn root() -> impl IntoResponse {
         "title": "Welcome to the Home Access Center API!",
         "message": "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/",
         "routes": [
-            "/api/name", "/api/assignments", "/api/info", "/api/averages", "/api/weightings",
-            "/api/classes", "/api/reportcard", "/api/ipr", "/api/transcript", "/api/rank"
-        ]
+            "/api/name", "/api/assignments", "/api/info", "/api/averages", "/api/weightings", "/api/classes", "/api/reportcard", "/api/ipr", "/api/transcript", "/api/rank"       ]
     });
     Json(message)
 }

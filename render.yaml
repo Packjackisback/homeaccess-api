@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: my-rust-app
+    name: homeaccess-cli
     env: rust
     buildCommand: cargo build --release
     startCommand: cargo run --release

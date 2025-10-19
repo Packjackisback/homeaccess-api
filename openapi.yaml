@@ -1,0 +1,623 @@
+openapi: 3.0.3
+info:
+  title: Home Access Center API
+  description: |
+    API for accessing Home Access Center student information including grades, assignments, 
+    transcripts, and more. This API scrapes and provides structured data from Home Access 
+    Center portals used by school districts.
+    
+    Visit the full documentation at https://homeaccesscenterapi-docs.vercel.app/
+  version: 0.1.0
+  contact:
+    name: Home Access Center API
+    url: https://github.com/Packjackisback/homeaccess-api
+
+servers:
+  - url: https://homeaccesscenterapi.vercel.app
+    description: Production server
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Student Information
+    description: Endpoints for retrieving student profile information
+  - name: Classes
+    description: Endpoints for retrieving class-related information
+  - name: Grades
+    description: Endpoints for retrieving grade information
+  - name: Reports
+    description: Endpoints for retrieving report cards and transcripts
+
+paths:
+  /:
+    get:
+      summary: API Root
+      description: Welcome endpoint that returns API information and available routes
+      operationId: getRoot
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    example: "Welcome to the Home Access Center API!"
+                  message:
+                    type: string
+                    example: "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/"
+                  routes:
+                    type: array
+                    items:
+                      type: string
+                    example: ["/api/name", "/api/info", "/api/classes", "/api/averages"]
+                  cache_param:
+                    type: string
+                    example: "Add ?no_cache=true to any endpoint to bypass cache"
+
+  /api/:
+    get:
+      summary: API Root (Alternative)
+      description: Alternative welcome endpoint that returns the same information as /
+      operationId: getApiRoot
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  message:
+                    type: string
+                  routes:
+                    type: array
+                    items:
+                      type: string
+                  cache_param:
+                    type: string
+
+  /api/name:
+    get:
+      summary: Get Student Name
+      description: Retrieves the student's full name from their profile
+      operationId: getName
+      tags:
+        - Student Information
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Student name retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: The student's full name
+                    example: "John Doe"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/info:
+    get:
+      summary: Get Student Information
+      description: Retrieves detailed student profile information including grade, school, DOB, counselor, language, and cohort year
+      operationId: getInfo
+      tags:
+        - Student Information
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Student information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: Student's full name
+                    example: "John Doe"
+                  grade:
+                    type: string
+                    description: Current grade level
+                    example: "11"
+                  school:
+                    type: string
+                    description: School name
+                    example: "High School"
+                  dob:
+                    type: string
+                    description: Date of birth
+                    example: "01/15/2007"
+                  counselor:
+                    type: string
+                    description: Counselor's name
+                    example: "Jane Smith"
+                  language:
+                    type: string
+                    description: Primary language
+                    example: "English"
+                  cohort_year:
+                    type: string
+                    description: Cohort graduation year
+                    example: "2025"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/classes:
+    get:
+      summary: Get Class List
+      description: Retrieves a list of all classes the student is enrolled in
+      operationId: getClasses
+      tags:
+        - Classes
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: List of classes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["AP Computer Science", "English III", "Pre-Calculus", "Chemistry"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/averages:
+    get:
+      summary: Get Class Averages
+      description: Retrieves the current grade average for each class
+      operationId: getAverages
+      tags:
+        - Grades
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Class averages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  description: Average grade for the class
+                example:
+                  "AP Computer Science": "95.5"
+                  "English III": "88.2"
+                  "Pre-Calculus": "92.0"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/assignments:
+    get:
+      summary: Get Assignments
+      description: Retrieves detailed assignment information for all classes including grades and dates
+      operationId: getAssignments
+      tags:
+        - Grades
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Assignments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+                    description: Assignment row data (date, assignment name, category, score, etc.)
+                example:
+                  "AP Computer Science":
+                    - ["10/15/2023", "Quiz 1", "Major", "95", "100"]
+                    - ["10/18/2023", "Lab Assignment", "Minor", "88", "100"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/weightings:
+    get:
+      summary: Get Grade Weightings
+      description: Retrieves the grading category weightings for each class
+      operationId: getWeightings
+      tags:
+        - Grades
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Grade weightings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+                    description: Weighting row data (category, weight percentage)
+                example:
+                  "AP Computer Science":
+                    - ["Major", "60%", "95.5"]
+                    - ["Minor", "30%", "92.0"]
+                    - ["Other", "10%", "100.0"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/gradebook:
+    get:
+      summary: Get Complete Gradebook
+      description: Retrieves a comprehensive gradebook including averages, assignments, and weightings for all classes
+      operationId: getGradebook
+      tags:
+        - Grades
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Gradebook retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    average:
+                      type: string
+                      description: Current class average
+                    assignments:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: string
+                      description: List of assignment rows
+                    weightings:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: string
+                      description: List of grading category weightings
+                example:
+                  "AP Computer Science":
+                    average: "95.5"
+                    assignments:
+                      - ["10/15/2023", "Quiz 1", "Major", "95", "100"]
+                      - ["10/18/2023", "Lab Assignment", "Minor", "88", "100"]
+                    weightings:
+                      - ["Major", "60%", "95.5"]
+                      - ["Minor", "30%", "92.0"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/reportcard:
+    get:
+      summary: Get Report Card
+      description: Retrieves the official report card with grades from all marking periods
+      operationId: getReportCard
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Report card retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: string
+                  description: Report card row data
+                example:
+                  - ["Course", "Teacher", "Period", "S1", "S2", "Exam", "Final"]
+                  - ["AP Computer Science", "Mr. Smith", "1", "95", "93", "96", "94"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ipr:
+    get:
+      summary: Get Interim Progress Report
+      description: Retrieves the interim progress report (IPR) showing current progress between grading periods
+      operationId: getProgressReport
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Progress report retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: string
+                  description: Progress report row data
+                example:
+                  - ["Course", "Teacher", "Period", "Grade", "Absences"]
+                  - ["AP Computer Science", "Mr. Smith", "1", "A", "0"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/transcript:
+    get:
+      summary: Get Transcript
+      description: Retrieves the full student transcript with all historical grades, GPA information, and credit hours
+      operationId: getTranscript
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Transcript retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  oneOf:
+                    - type: object
+                      description: Semester information
+                      properties:
+                        year:
+                          type: string
+                          description: Academic year
+                        semester:
+                          type: string
+                          description: Semester number
+                        grade:
+                          type: string
+                          description: Grade level during this semester
+                        school:
+                          type: string
+                          description: School name
+                        credits:
+                          type: string
+                          description: Credits earned
+                        data:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: string
+                          description: Course data for the semester
+                    - type: string
+                      description: GPA or rank values
+                example:
+                  "2023-2024 - Semester 1":
+                    year: "2023-2024"
+                    semester: "1"
+                    grade: "11"
+                    school: "High School"
+                    credits: "3.5"
+                    data:
+                      - ["Course", "Grade", "Credit"]
+                      - ["AP Computer Science", "A", "1.0"]
+                  "Cumulative GPA": "3.85"
+                  "rank": "15"
+                  "quartile": "1"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/rank:
+    get:
+      summary: Get Class Rank
+      description: Retrieves the student's class rank, quartile, and GPA information
+      operationId: getRank
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Rank information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rank:
+                    type: string
+                    description: Student's class rank
+                    example: "15"
+                  quartile:
+                    type: string
+                    description: Student's quartile ranking
+                    example: "1"
+                additionalProperties:
+                  type: string
+                  description: Additional GPA information
+                example:
+                  rank: "15"
+                  quartile: "1"
+                  "Cumulative GPA": "3.85"
+                  "Weighted GPA": "4.12"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    Username:
+      name: user
+      in: query
+      required: true
+      description: Home Access Center username
+      schema:
+        type: string
+      example: "student123"
+
+    Password:
+      name: pass
+      in: query
+      required: true
+      description: Home Access Center password
+      schema:
+        type: string
+        format: password
+      example: "mypassword"
+
+    Link:
+      name: link
+      in: query
+      required: false
+      description: Home Access Center portal URL (defaults to Katy ISD)
+      schema:
+        type: string
+        format: uri
+        default: "https://homeaccess.katyisd.org"
+      example: "https://homeaccess.katyisd.org"
+
+    Short:
+      name: short
+      in: query
+      required: false
+      description: Use shortened class names
+      schema:
+        type: boolean
+        default: false
+      example: true
+
+    SixWeeks:
+      name: six_weeks
+      in: query
+      required: false
+      description: Specific six weeks period to retrieve (for assignments-related endpoints)
+      schema:
+        type: string
+      example: "3"
+
+    NoCache:
+      name: no_cache
+      in: query
+      required: false
+      description: Bypass cache and force fresh data retrieval
+      schema:
+        type: boolean
+        default: false
+      example: true
+
+  responses:
+    Unauthorized:
+      description: Invalid username or password
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid username or password"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Failed to retrieve data"
+
+  securitySchemes:
+    QueryAuth:
+      type: apiKey
+      in: query
+      name: user
+      description: |
+        Authentication is done via query parameters. Each request must include 
+        both 'user' and 'pass' parameters with valid Home Access Center credentials.
+
+security:
+  - QueryAuth: []

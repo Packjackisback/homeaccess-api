@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Access Center API Documentation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 30px 0;
+        }
+        .endpoint {
+            background: #f5f5f5;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .method {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .path {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #333;
+        }
+        .description {
+            margin-top: 10px;
+            color: #666;
+        }
+        .params {
+            margin-top: 10px;
+        }
+        .param {
+            font-family: 'Courier New', monospace;
+            color: #d73a49;
+        }
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 Home Access Center API Documentation</h1>
+        
+        <div class="info">
+            <strong>📄 Full OpenAPI Specification:</strong> View the complete OpenAPI 3.0 specification in 
+            <a href="openapi.yaml" target="_blank">openapi.yaml</a>
+            <br><br>
+            <strong>🔍 Interactive Documentation:</strong> Open <code>openapi.yaml</code> in:
+            <ul>
+                <li><a href="https://editor.swagger.io/" target="_blank">Swagger Editor</a></li>
+                <li><a href="https://stoplight.io/" target="_blank">Stoplight</a></li>
+                <li>Or use tools like Redoc, Postman, or Insomnia</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <strong>🔐 Authentication:</strong> All endpoints require authentication via query parameters:
+            <ul>
+                <li><span class="param">user</span> - Your Home Access Center username (required)</li>
+                <li><span class="param">pass</span> - Your Home Access Center password (required)</li>
+                <li><span class="param">link</span> - Portal URL (optional, defaults to Katy ISD)</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🎓 Student Information</h2>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/name</span>
+                <div class="description">
+                    Get the student's full name
+                    <div class="params">
+                        Optional: <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/info</span>
+                <div class="description">
+                    Get detailed student profile including grade, school, DOB, counselor, language, and cohort year
+                    <div class="params">
+                        Optional: <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📚 Classes</h2>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/classes</span>
+                <div class="description">
+                    Get list of all enrolled classes
+                    <div class="params">
+                        Optional: <span class="param">short</span> (boolean), 
+                        <span class="param">six_weeks</span> (string), 
+                        <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Grades</h2>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/averages</span>
+                <div class="description">
+                    Get current grade averages for all classes
+                    <div class="params">
+                        Optional: <span class="param">short</span> (boolean), 
+                        <span class="param">six_weeks</span> (string), 
+                        <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/assignments</span>
+                <div class="description">
+                    Get detailed assignment information with grades and dates
+                    <div class="params">
+                        Optional: <span class="param">short</span> (boolean), 
+                        <span class="param">six_weeks</span> (string), 
+                        <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/weightings</span>
+                <div class="description">
+                    Get grading category weightings for each class
+                    <div class="params">
+                        Optional: <span class="param">short</span> (boolean), 
+                        <span class="param">six_weeks</span> (string), 
+                        <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/gradebook</span>
+                <div class="description">
+                    Get complete gradebook with averages, assignments, and weightings
+                    <div class="params">
+                        Optional: <span class="param">short</span> (boolean), 
+                        <span class="param">six_weeks</span> (string), 
+                        <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Reports</h2>
+            
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/reportcard</span>
+                <div class="description">
+                    Get official report card with grades from all marking periods
+                    <div class="params">
+                        Optional: <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/ipr</span>
+                <div class="description">
+                    Get interim progress report showing current progress between grading periods
+                    <div class="params">
+                        Optional: <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/transcript</span>
+                <div class="description">
+                    Get full transcript with historical grades, GPA, and credits
+                    <div class="params">
+                        Optional: <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/api/rank</span>
+                <div class="description">
+                    Get class rank, quartile, and GPA information
+                    <div class="params">
+                        Optional: <span class="param">no_cache</span> (boolean)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💡 Example Usage</h2>
+            <div class="endpoint">
+                <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 4px; overflow-x: auto;">
+# Get student name
+curl "http://localhost:3000/api/name?user=USERNAME&pass=PASSWORD"
+
+# Get class averages with shortened names
+curl "http://localhost:3000/api/averages?user=USERNAME&pass=PASSWORD&short=true"
+
+# Get assignments for specific six weeks period, bypassing cache
+curl "http://localhost:3000/api/assignments?user=USERNAME&pass=PASSWORD&six_weeks=3&no_cache=true"
+
+# Get complete gradebook
+curl "http://localhost:3000/api/gradebook?user=USERNAME&pass=PASSWORD"
+                </pre>
+            </div>
+        </div>
+
+        <div class="note">
+            <strong>⚡ Cache Information:</strong>
+            <ul>
+                <li>Login sessions are cached for 30 minutes</li>
+                <li>Page data is cached for 5 minutes</li>
+                <li>Use <span class="param">no_cache=true</span> to bypass caching</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

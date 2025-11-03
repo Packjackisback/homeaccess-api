@@ -12,7 +12,7 @@ RUN apt-get update && \
 
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
-
+COPY openapi.yaml ./openapi.yaml 
 RUN cargo build --release
 
 FROM debian:bookworm-slim

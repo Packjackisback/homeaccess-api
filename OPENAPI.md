@@ -7,11 +7,25 @@ This directory contains the OpenAPI 3.0 specification for the Home Access Center
 - **openapi.yaml** - OpenAPI specification in YAML format (recommended for editing)
 - **openapi.json** - OpenAPI specification in JSON format (auto-generated from YAML)
 
-## Usage
+## Viewing the Documentation
 
-### Viewing the Documentation
+### Interactive Documentation (Recommended)
 
-The OpenAPI documentation is served directly by the API at:
+Visit the hosted Swagger UI interface:
+```
+https://hac.packjack.dev/docs
+```
+
+This provides:
+- Interactive API explorer with "Try it out" functionality
+- Complete parameter descriptions and examples
+- Response schemas and examples
+- No downloads or setup required
+- Search and filter capabilities
+
+### Raw Specification Files
+
+The OpenAPI specification files are also available:
 - YAML: https://hac.packjack.dev/openapi.yaml
 - JSON: https://hac.packjack.dev/openapi.json
 
@@ -19,7 +33,7 @@ The OpenAPI documentation is served directly by the API at:
 
 You can use these specification files with various OpenAPI tools:
 
-#### Swagger UI
+#### Swagger Editor
 Visit https://editor.swagger.io/ and import the URL:
 ```
 https://hac.packjack.dev/openapi.yaml

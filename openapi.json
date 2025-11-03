@@ -57,11 +57,24 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "OpenAPI documentation available at /openapi.yaml or /openapi.json"
+                      "example": "Interactive API documentation available at /docs"
                     },
                     "docs_url": {
                       "type": "string",
-                      "example": "https://hac.packjack.dev/openapi.yaml"
+                      "example": "https://hac.packjack.dev/docs"
+                    },
+                    "openapi_spec": {
+                      "type": "object",
+                      "properties": {
+                        "yaml": {
+                          "type": "string",
+                          "example": "https://hac.packjack.dev/openapi.yaml"
+                        },
+                        "json": {
+                          "type": "string",
+                          "example": "https://hac.packjack.dev/openapi.json"
+                        }
+                      }
                     },
                     "routes": {
                       "type": "array",
@@ -100,6 +113,70 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WelcomeMessage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/docs": {
+      "get": {
+        "summary": "Interactive API Documentation",
+        "description": "Serves an interactive Swagger UI interface for exploring and testing the API",
+        "tags": [
+          "Student Info"
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML page with Swagger UI",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string",
+                  "example": "<!DOCTYPE html>..."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.yaml": {
+      "get": {
+        "summary": "OpenAPI Specification (YAML)",
+        "description": "Returns the OpenAPI 3.0 specification in YAML format",
+        "tags": [
+          "Student Info"
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification in YAML format",
+            "content": {
+              "application/yaml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "OpenAPI Specification (JSON)",
+        "description": "Returns the OpenAPI 3.0 specification in JSON format",
+        "tags": [
+          "Student Info"
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification in JSON format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
                 }
               }
             }
@@ -903,11 +980,24 @@
           },
           "message": {
             "type": "string",
-            "example": "OpenAPI documentation available at /openapi.yaml or /openapi.json"
+            "example": "Interactive API documentation available at /docs"
           },
           "docs_url": {
             "type": "string",
-            "example": "https://hac.packjack.dev/openapi.yaml"
+            "example": "https://hac.packjack.dev/docs"
+          },
+          "openapi_spec": {
+            "type": "object",
+            "properties": {
+              "yaml": {
+                "type": "string",
+                "example": "https://hac.packjack.dev/openapi.yaml"
+              },
+              "json": {
+                "type": "string",
+                "example": "https://hac.packjack.dev/openapi.json"
+              }
+            }
           },
           "routes": {
             "type": "array",

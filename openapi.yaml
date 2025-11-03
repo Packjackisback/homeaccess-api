@@ -583,10 +583,3 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             error: "Failed to fetch data from Home Access Center"
-
-  securitySchemes:
-    QueryAuth:
-      type: apiKey
-      in: query
-      name: user
-      description: Authentication via username and password query parameters

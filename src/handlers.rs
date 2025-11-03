@@ -201,7 +201,7 @@ pub async fn serve_openapi_yaml() -> impl IntoResponse {
     let openapi_content = include_str!("../openapi.yaml");
     (
         StatusCode::OK,
-        [(header::CONTENT_TYPE, "application/x-yaml")],
+        [(header::CONTENT_TYPE, "application/yaml")],
         openapi_content
     )
 }

@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::Json,
     response::IntoResponse,
+    http::header,
 };
 use serde_json::json;
 use serde::Deserialize;
@@ -186,13 +187,32 @@ macro_rules! endpoint {
 pub async fn root() -> impl IntoResponse {
     let message = json!({
         "title": "Welcome to the Home Access Center API!",
-        "message": "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/",
+        "message": "OpenAPI documentation available at /openapi.yaml or /openapi.json",
+        "docs_url": "https://hac.packjack.dev/openapi.yaml",
         "routes": [
             "/api/name", "/api/assignments", "/api/info", "/api/averages", "/api/weightings", "/api/classes", "/api/reportcard", "/api/ipr", "/api/transcript", "/api/rank"
         ],
         "cache_param": "Add ?no_cache=true to any endpoint to bypass cache"
     });
     Json(message)
+}
+
+pub async fn serve_openapi_yaml() -> impl IntoResponse {
+    let openapi_content = include_str!("../openapi.yaml");
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/x-yaml")],
+        openapi_content
+    )
+}
+
+pub async fn serve_openapi_json() -> impl IntoResponse {
+    let openapi_content = include_str!("../openapi.json");
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        openapi_content
+    )
 }
 
 endpoint!(

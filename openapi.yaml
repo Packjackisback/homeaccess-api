@@ -1,0 +1,586 @@
+openapi: 3.0.3
+info:
+  title: Home Access Center API
+  description: |
+    A REST API for accessing Home Access Center student data. This API provides programmatic access to student information including grades, assignments, classes, transcripts, and more.
+    
+    ## Authentication
+    
+    All endpoints (except the root endpoint) require authentication via query parameters:
+    - `user`: Your Home Access Center username
+    - `pass`: Your Home Access Center password
+    
+    ## Caching
+    
+    The API implements intelligent caching:
+    - Login sessions are cached for 30 minutes
+    - Page data is cached for 5 minutes
+    - Add `?no_cache=true` to any endpoint to bypass cache
+    
+    ## Base URL
+    
+    This API is hosted at: `https://hac.packjack.dev`
+  version: 0.1.0
+  contact:
+    name: Home Access Center API
+  license:
+    name: MIT
+
+servers:
+  - url: https://hac.packjack.dev
+    description: Production server
+
+tags:
+  - name: Student Info
+    description: Basic student information
+  - name: Classes
+    description: Class-related information
+  - name: Assignments
+    description: Assignment and grade data
+  - name: Reports
+    description: Report cards and transcripts
+
+paths:
+  /:
+    get:
+      summary: API Information
+      description: Returns welcome message and available routes
+      tags:
+        - Student Info
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    example: "Welcome to the Home Access Center API!"
+                  message:
+                    type: string
+                    example: "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/"
+                  routes:
+                    type: array
+                    items:
+                      type: string
+                    example: ["/api/name", "/api/info", "/api/classes"]
+                  cache_param:
+                    type: string
+                    example: "Add ?no_cache=true to any endpoint to bypass cache"
+
+  /api/:
+    get:
+      summary: API Information (alternate route)
+      description: Returns welcome message and available routes
+      tags:
+        - Student Info
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WelcomeMessage'
+
+  /api/name:
+    get:
+      summary: Get Student Name
+      description: Retrieves the student's name from Home Access Center
+      tags:
+        - Student Info
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "John Doe"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/info:
+    get:
+      summary: Get Student Information
+      description: Retrieves detailed student profile information
+      tags:
+        - Student Info
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "John Doe"
+                  grade:
+                    type: string
+                    example: "11"
+                  school:
+                    type: string
+                    example: "Example High School"
+                  dob:
+                    type: string
+                    example: "01/01/2007"
+                  counselor:
+                    type: string
+                    example: "Jane Smith"
+                  language:
+                    type: string
+                    example: "English"
+                  cohort_year:
+                    type: string
+                    example: "2025"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/classes:
+    get:
+      summary: Get Class List
+      description: Retrieves a list of the student's classes
+      tags:
+        - Classes
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["AP Calculus BC", "English III Honors", "AP Chemistry"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/averages:
+    get:
+      summary: Get Class Averages
+      description: Retrieves current averages for all classes
+      tags:
+        - Classes
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                example:
+                  "AP Calculus BC": "95"
+                  "English III Honors": "92"
+                  "AP Chemistry": "88"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/assignments:
+    get:
+      summary: Get Assignments
+      description: Retrieves detailed assignment information for all classes
+      tags:
+        - Assignments
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  "AP Calculus BC":
+                    - ["10/15/2024", "Quiz 3", "Major Grades", "95", "100"]
+                    - ["10/10/2024", "Homework 5", "Daily Grades", "10", "10"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/gradebook:
+    get:
+      summary: Get Complete Gradebook
+      description: Retrieves assignments with grades and weightings for all classes
+      tags:
+        - Assignments
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    assignments:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: string
+                    weightings:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/weightings:
+    get:
+      summary: Get Grade Weightings
+      description: Retrieves grade category weightings for all classes
+      tags:
+        - Classes
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/Short'
+        - $ref: '#/components/parameters/SixWeeks'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  "AP Calculus BC":
+                    - ["Major Grades", "60%", "95.0"]
+                    - ["Daily Grades", "40%", "98.0"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/reportcard:
+    get:
+      summary: Get Report Card
+      description: Retrieves report card tables with grades per marking period
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  - ["Course", "Teacher", "MP1", "MP2", "Sem1", "MP3", "MP4", "Sem2", "Final"]
+                  - ["AP Calculus BC", "Smith, John", "95", "93", "94", "96", "94", "95", "95"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/ipr:
+    get:
+      summary: Get Interim Progress Report
+      description: Retrieves interim progress report data
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  - ["Course", "Teacher", "Grade", "Absences", "Tardies"]
+                  - ["AP Calculus BC", "Smith, John", "95", "0", "0"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/transcript:
+    get:
+      summary: Get Full Transcript
+      description: Retrieves complete transcript with GPA and semester information
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rank:
+                    type: string
+                    example: "15 of 450"
+                  quartile:
+                    type: string
+                    example: "Top 25%"
+                  Weighted GPA:
+                    type: string
+                    example: "4.35"
+                  Unweighted GPA:
+                    type: string
+                    example: "3.95"
+                additionalProperties:
+                  type: object
+                  properties:
+                    year:
+                      type: string
+                    semester:
+                      type: string
+                    credits:
+                      type: string
+                    data:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/rank:
+    get:
+      summary: Get GPA Rank
+      description: Retrieves GPA rank and quartile information
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - $ref: '#/components/parameters/Password'
+        - $ref: '#/components/parameters/Link'
+        - $ref: '#/components/parameters/NoCache'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rank:
+                    type: string
+                    example: "15 of 450"
+                  quartile:
+                    type: string
+                    example: "Top 25%"
+                  Weighted GPA:
+                    type: string
+                    example: "4.35"
+                  Unweighted GPA:
+                    type: string
+                    example: "3.95"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    Username:
+      name: user
+      in: query
+      required: true
+      description: Home Access Center username
+      schema:
+        type: string
+      example: "student123"
+
+    Password:
+      name: pass
+      in: query
+      required: true
+      description: Home Access Center password
+      schema:
+        type: string
+        format: password
+      example: "mypassword"
+
+    Link:
+      name: link
+      in: query
+      required: false
+      description: Home Access Center base URL (defaults to https://homeaccess.katyisd.org)
+      schema:
+        type: string
+        format: uri
+        default: https://homeaccess.katyisd.org
+      example: "https://homeaccess.katyisd.org"
+
+    Short:
+      name: short
+      in: query
+      required: false
+      description: Whether to return shortened class names
+      schema:
+        type: boolean
+        default: false
+      example: true
+
+    SixWeeks:
+      name: six_weeks
+      in: query
+      required: false
+      description: Specific six weeks period to retrieve assignments for
+      schema:
+        type: string
+      example: "1"
+
+    NoCache:
+      name: no_cache
+      in: query
+      required: false
+      description: Bypass cache and fetch fresh data
+      schema:
+        type: boolean
+        default: false
+      example: true
+
+  schemas:
+    WelcomeMessage:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Welcome to the Home Access Center API!"
+        message:
+          type: string
+          example: "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/"
+        routes:
+          type: array
+          items:
+            type: string
+          example: ["/api/name", "/api/info", "/api/classes"]
+        cache_param:
+          type: string
+          example: "Add ?no_cache=true to any endpoint to bypass cache"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message describing what went wrong
+
+  responses:
+    Unauthorized:
+      description: Invalid username or password
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Invalid username or password"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Failed to fetch data from Home Access Center"
+
+  securitySchemes:
+    QueryAuth:
+      type: apiKey
+      in: query
+      name: user
+      description: Authentication via username and password query parameters

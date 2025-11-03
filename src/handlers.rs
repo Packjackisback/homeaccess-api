@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::Json,
     response::IntoResponse,
+    http::header,
 };
 use serde_json::json;
 use serde::Deserialize;
@@ -186,13 +187,83 @@ macro_rules! endpoint {
 pub async fn root() -> impl IntoResponse {
     let message = json!({
         "title": "Welcome to the Home Access Center API!",
-        "message": "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/",
+        "message": "Interactive API documentation available at /docs",
+        "docs_url": "https://hac.packjack.dev/docs",
+        "openapi_spec": {
+            "yaml": "https://hac.packjack.dev/openapi.yaml",
+            "json": "https://hac.packjack.dev/openapi.json"
+        },
         "routes": [
             "/api/name", "/api/assignments", "/api/info", "/api/averages", "/api/weightings", "/api/classes", "/api/reportcard", "/api/ipr", "/api/transcript", "/api/rank"
         ],
         "cache_param": "Add ?no_cache=true to any endpoint to bypass cache"
     });
     Json(message)
+}
+
+pub async fn serve_openapi_yaml() -> impl IntoResponse {
+    let openapi_content = include_str!("../openapi.yaml");
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/yaml")],
+        openapi_content
+    )
+}
+
+pub async fn serve_openapi_json() -> impl IntoResponse {
+    let openapi_content = include_str!("../openapi.json");
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        openapi_content
+    )
+}
+
+pub async fn serve_docs() -> impl IntoResponse {
+    let html = r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Access Center API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            window.ui = SwaggerUIBundle({
+                url: "/openapi.yaml",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout"
+            });
+        };
+    </script>
+</body>
+</html>
+"#;
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        html
+    )
 }
 
 endpoint!(

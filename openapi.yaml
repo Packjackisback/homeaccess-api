@@ -60,7 +60,10 @@ paths:
                     example: "Welcome to the Home Access Center API!"
                   message:
                     type: string
-                    example: "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/"
+                    example: "OpenAPI documentation available at /openapi.yaml or /openapi.json"
+                  docs_url:
+                    type: string
+                    example: "https://hac.packjack.dev/openapi.yaml"
                   routes:
                     type: array
                     items:
@@ -542,7 +545,10 @@ components:
           example: "Welcome to the Home Access Center API!"
         message:
           type: string
-          example: "Visit the docs at https://homeaccesscenterapi-docs.vercel.app/"
+          example: "OpenAPI documentation available at /openapi.yaml or /openapi.json"
+        docs_url:
+          type: string
+          example: "https://hac.packjack.dev/openapi.yaml"
         routes:
           type: array
           items:

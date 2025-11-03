@@ -185,27 +185,35 @@ paths:
               schema:
                 type: object
                 properties:
-                  name:
+                  cohort_year:
                     type: string
-                    example: "John Doe"
+                    example: "2027"
+                  counselor:
+                    type: string
+                    example: "Jones, Natalie"
+                  dob:
+                    type: string
+                    example: "5/2/2009"
                   grade:
                     type: string
                     example: "11"
-                  school:
-                    type: string
-                    example: "Example High School"
-                  dob:
-                    type: string
-                    example: "01/01/2007"
-                  counselor:
-                    type: string
-                    example: "Jane Smith"
                   language:
                     type: string
                     example: "English"
-                  cohort_year:
+                  name:
                     type: string
-                    example: "2025"
+                    example: "MacGregor, Jackson North"
+                  school:
+                    type: string
+                    example: "Seven Lakes HS"
+              example:
+                cohort_year: "2027"
+                counselor: "Jones, Natalie"
+                dob: "5/2/2009"
+                grade: "11"
+                language: "English"
+                name: "MacGregor, Jackson North"
+                school: "Seven Lakes HS"
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -371,10 +379,16 @@ paths:
                     type: array
                     items:
                       type: string
-                example:
-                  "AP Calculus BC":
-                    - ["Major Grades", "60%", "95.0"]
-                    - ["Daily Grades", "40%", "98.0"]
+                    description: "Array containing: [category, points_earned, total_points, percentage, weight, weighted_value]"
+              example:
+                "AP PHYSICS 1 GT":
+                  - ["Major", "187.0000", "200.00", "93.500%", "70.00", "65.450000"]
+                  - ["Minor", "658.0000", "800.00", "82.250%", "20.00", "16.450000"]
+                  - ["Other", "197.0000", "400.00", "49.250%", "10.00", "4.925000"]
+                "AP CALCULUS BC":
+                  - ["Major", "162.0000", "200.00", "81.000%", "70.00", "56.700000"]
+                  - ["Minor", "348.0000", "400.00", "87.000%", "20.00", "17.400000"]
+                  - ["Other", "1397.0000", "1400.00", "99.785%", "10.00", "9.978600"]
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
